@@ -103,7 +103,7 @@ class DataBaseHandler:
         return table
 
     def remove_table_metadata(self, table_name: str, schema_name: str):
-        
+        logging.info(f"Удаляю метаданные для {schema_name}.{table_name}")
         name_to_remove = schema_name + "." + table_name
         table_to_remove = self._metadata.tables.get(name_to_remove)
         if table_to_remove is not None:
