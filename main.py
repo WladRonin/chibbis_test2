@@ -3,13 +3,33 @@ import urllib
 from dotenv import load_dotenv
 from src.processing import DataProcessor
 import argparse
+import logging
 from datetime import datetime, timedelta
 from src.config import WEATHER_INDICATORS_LIST
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S',
+    filename='last_start.log',
+    filemode='w',
+    encoding='utf-8'
+)
 
 default_start = (datetime.now() - timedelta(days=3)).strftime("%Y-%m-%d")
 default_end = datetime.now().strftime("%Y-%m-%d")
 
-parser = argparse.ArgumentParser(description="Тестовая интеграция")
+parser = argparse.ArgumentParser(description="""
+    Тестовая интеграция:
+    1. Загружает данные о погоде в привязке к городам из prod.dbo.cities
+        в таблицу dm.weather_series
+    2. Обновляет таблицу dm.orders_n_weather, обогащая данные заказов
+        информацией из dm.weather_series
+    Данные погоды имеют часовую гранулярность.
+    По умолчанию, обновляет данные за последние три дня.
+    (!) Ранний запуск может привести к ошибке,
+        если данные еще не появились в системе
+""", formatter_class=argparse.RawTextHelpFormatter)
 parser.add_argument(
     "-r",
     "--reset",

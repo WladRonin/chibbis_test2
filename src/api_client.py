@@ -40,6 +40,7 @@ class ServiceClient:
         return None
 
     def get_weather_archive(self, params: dict):
+        logging.info("Скачиваю данные погоды...")
         return self._request("GET", "v1/archive", params)
 
     def close(self):

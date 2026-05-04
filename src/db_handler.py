@@ -31,7 +31,7 @@ class DataBaseHandler:
 
     def dispose_engine(self):
         if self._engine is not None:
-            logging.info("Закрываем все соединения в пуле...")
+            logging.info("Закрываю все соединения в пуле...")
             self._engine.dispose()
             self._engine = None
         else:
@@ -44,6 +44,7 @@ class DataBaseHandler:
 
     def init_db(self):
         file_path = 'scripts/init_db.sql'
+        logging.warning("Удаляю и пересоздаю ключевые таблицы и схемы!")
         with open(file_path, 'r', encoding='utf-8') as file:
             my_sql = file.read()
         with self._engine.begin() as connection:
@@ -51,6 +52,7 @@ class DataBaseHandler:
 
     def get_cities(self):
         # В лучшем мире я бы сделал это через модели
+        logging.info("Получаю информацию о городах из prod.dbo.cities")
         my_sql = "SELECT TOP 10 * FROM prod.dbo.cities"
         result = pd.read_sql(my_sql, con=self._engine)
         return result
@@ -87,9 +89,11 @@ class DataBaseHandler:
         return result
 
     def flush_metadata(self):
+        logging.info("Полностью очищаю метаданные DataBaseHandler")
         self._metadata.clear()
 
     def get_table_metadata(self, table_name: str, schema_name: str):
+        logging.info(f"Запрашиваю метаданные для {schema_name}.{table_name}")
         table = Table(
             table_name,
             self._metadata,
@@ -99,6 +103,7 @@ class DataBaseHandler:
         return table
 
     def remove_table_metadata(self, table_name: str, schema_name: str):
+        
         name_to_remove = schema_name + "." + table_name
         table_to_remove = self._metadata.tables.get(name_to_remove)
         if table_to_remove is not None:
@@ -111,9 +116,12 @@ class DataBaseHandler:
     ):
         check_table = self.get_table_metadata(table_name, table_schema)
         if check_table is not None:
+            logging.info(f"Выполняю TRUNCATE для {table_schema}.{table_name}")
             with self._engine.begin() as connection:
                 my_sql = f"TRUNCATE TABLE {table_schema}.{table_name}"
                 connection.execute(text(my_sql))
+        else:
+            logging.error("Таблицы с таким именем не существует!")
         return check_table
 
     def append_from_dataframe(
@@ -124,6 +132,10 @@ class DataBaseHandler:
     ):
         table = self.get_table_metadata(target_table_name, target_table_schema)
         if table is not None:
+            logging.info(
+                f"Загружаю в {target_table_schema}.{target_table_name}"
+                " данные из DataFrame"
+            )
             source_data_frame.to_sql(
                 target_table_name,
                 schema=target_table_schema,
@@ -153,6 +165,10 @@ class DataBaseHandler:
         # количество и последовательность атрибутов совпадает с дельтой
         # (Кроме технических)
         if target_table is not None and delta_table is not None:
+            logging.info(
+                f"INSERT в {target_table_schema}.{target_table_name}"
+                f" из {delta_table_schema}.{delta_table_name}"
+            )
             delta_non_tech_columns = [
                 attr for attr in delta_table.columns.keys()
                 if attr not in ("HashKey", "AddedOn")  # Ручной костыль
@@ -190,6 +206,10 @@ class DataBaseHandler:
         # количество последовательность атрибутов  совпадает с дельтой
         # (Кроме технических)
         if target_table is not None and delta_table is not None:
+            logging.info(
+                f"MERGE в {target_table_schema}.{target_table_name}"
+                f" из {delta_table_schema}.{delta_table_name}"
+            )
             my_sql = f"MERGE {target_table_schema}.{target_table_name} AS t"
             my_sql += f" USING {delta_table_schema}.{delta_table_name} AS s"
             my_sql += " ON (s.HashKey = t.HashKey)"
@@ -234,6 +254,10 @@ class DataBaseHandler:
         path_to_script: str,
         params: dict
     ):
+        logging.warning(
+            f"Запуск кастомного скрипта {path_to_script}"
+            f" с параметрами {params}"
+        )
         with open(path_to_script, 'r', encoding='utf-8') as file:
             my_sql = file.read()
         with self._engine.begin() as connection:
