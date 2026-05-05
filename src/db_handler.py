@@ -53,7 +53,7 @@ class DataBaseHandler:
     def get_cities(self):
         # В лучшем мире я бы сделал это через модели
         logging.info("Получаю информацию о городах из prod.dbo.cities")
-        my_sql = "SELECT TOP 10 * FROM prod.dbo.cities"
+        my_sql = "SELECT * FROM prod.dbo.cities"
         result = pd.read_sql(my_sql, con=self._engine)
         return result
 
