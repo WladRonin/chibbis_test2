@@ -57,7 +57,7 @@ CREATE TABLE stg.weather_series (
     AddedOn DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
     HashKey AS HASHBYTES(
         'SHA2_256', 
-        CONCAT_WS('|', WeatherTime, STR(latitude, 10, 7), STR(longitude, 10, 7))
+        CONCAT_WS('|', WeatherTime, CityId)
     ) PERSISTED,
     INDEX idx_stg_weather_series NONCLUSTERED (HashKey)
 );
@@ -84,7 +84,7 @@ CREATE TABLE dm.weather_series (
     AddedOn DATETIMEOFFSET NOT NULL,
     HashKey AS HASHBYTES(
         'SHA2_256', 
-        CONCAT_WS('|', WeatherTime, STR(Latitude, 10, 7), STR(Longitude, 10, 7))
+        CONCAT_WS('|', WeatherTime, CityId)
     ) PERSISTED,
     ChangedOn DATETIMEOFFSET NOT NULL,
     CONSTRAINT pk_weather_series PRIMARY KEY NONCLUSTERED (HashKey),

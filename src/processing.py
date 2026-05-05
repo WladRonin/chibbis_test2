@@ -1,10 +1,10 @@
 # import datetime
-# import logging
+import logging
 import pandas as pd
 import urllib
 # from sqlalchemy import create_engine, text, Table, MetaData
 # from sqlalchemy.engine import URL
-from src.config import WEATHER_DICT, WEATHER_INDICATORS_LIST
+from src.config import WEATHER_DICT
 
 from src.db_handler import DataBaseHandler
 from src.api_client import ServiceClient
@@ -53,7 +53,10 @@ class DataProcessor:
         weather_data = pd.DataFrame()
         for i in range(0, len(df_cities), city_chunk):
             cities_chunk = df_cities.iloc[i:i + city_chunk]
-            # Здесь должно быть логирование print(cities_chunk)
+            logging.info(
+                f"Загружаю города {i}-{i+city_chunk}"
+                f"\n {df_cities.iloc[i:i + city_chunk]['Name'].to_list()}"
+            )
             # Здесь костыль, широта и долгота поменяны местами
             api_params = {
                 "latitude": df_cities["Lng"][i:i + city_chunk].tolist(),
@@ -73,19 +76,22 @@ class DataProcessor:
                         "longitude": raw_meta["longitude"]
                     })
                 chunk_df = pd.json_normalize(chunk_data, sep="_")
-                result_df = pd.concat([cities_chunk["Id"], chunk_df], axis=1)
-                weather_data = pd.concat([weather_data, result_df])
+                # result_df = pd.concat([cities_chunk["Id"], chunk_df], axis=1)
+                chunk_df["CityId"] = cities_chunk["Id"].values
+                weather_data = pd.concat(
+                    [weather_data, chunk_df], ignore_index=True
+                )
             else:
-                print("This data chunk is None (!)")
+                logging.warning("Пустой дата-чанк")
 
         # Немного причесываем
         explode_list = weather_indicators_list.copy()
         explode_list.append("WeatherTime")
-        weather_data = weather_data.rename(columns={"Id": "CityId"})
+        # weather_data = weather_data.rename(columns={"Id": "CityId"})
         weather_data = weather_data.rename(columns={"time": "WeatherTime"})
         weather_data = weather_data.explode(explode_list)
         weather_data["weather_code"] = weather_data["weather_code"].apply(
-            lambda x: WEATHER_DICT[x]
+            lambda x: WEATHER_DICT.get(x, "No Data")
         )
         weather_data["WeatherTime"] = pd.to_datetime(
             weather_data["WeatherTime"],
